@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Neon Maths AI</title>
+  <script src="https://cdn.jsdelivr.net/npm/mathjs@11.11.0/lib/browser/math.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #000;
+      padding: 100px;
+      color: #fff;
+    }
+
+    .card {
+      background: rgba(0, 0, 0, 0.7);
+      border: 5px solid #00ff88;
+      padding: 50px;
+      max-width: 500px;
+      margin: 0 auto;
+      border-radius: 20px;
+      box-shadow: 0 0 25px #ff00d4, 0 0 50px #00ff88;
+    }
+
+    h1, h2 {
+      text-align: center;
+      margin-bottom: 15px;
+      color: #ff00d4;
+      text-shadow: 0 0 10px #ff00d4;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+      color: #00ff88;
+      text-shadow: 0 0 6px #00ff88;
+    }
+
+    input, textarea, button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 8px;
+      border-radius: 8px;
+      border: 2px solid #ff00d4;
+      background: #111;
+      color: #00ff88;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    textarea {
+      border-color: #00ff88;
+    }
+
+    button {
+      background: #ff00d4;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s;
+      border: 2px solid #00ff88;
+    }
+
+    button:hover {
+      background: #00ff88;
+      color: #000;
+      border-color: #ff00d4;
+    }
+
+    #app { display: none; }
+    #error { color: #ff4d4d; margin-top: 10px; }
+    #answer { white-space: pre-wrap; margin-top: 15px; font-size: 20px; color: #ff00d4; }
+  </style>
+</head>
+
+<body>
+ <div class="card" id="login">
+      <h1>AI Maths Bot</h1>
+
+      <label>
+        Password:
+        <input type="password" id="password">
+      </label>
+
+      <button id="loginButton">Log in</button>
+
+      <div id="error"></div>
+    </div>
+
+    <script>
+      function login() {
+        const password = document.getElementById("password").value;
+        const errorDiv = document.getElementById("error");
+ if (password === "12345") {
+          errorDiv.style.color = "green";
+          errorDiv.textContent = "Logged in!";
+        } else {
+          errorDiv.style.color = "red";
+          errorDiv.textContent = "Wrong password.";
+        }
+      }
+
+      // Click on button
+      document.getElementById("loginButton").addEventListener("click", login);
+
+      // Press Enter in password field
+      document.getElementById("password").addEventListener("keydown", function (event) {
+        if (event.key === "Enter") {
+          login();
+        }
+      });
+    </script>
+  <div class="card" id="app">
+    <h2>Ask me a Maths Question</h2>
+
+    <p><strong style="color:#ff00d4;">Important:</strong>  
+    You <u>cannot</u> use <strong style="color:#00ff88;">x</strong> as multiplication.  
+    Use <strong style="color:#00ff88;">*</strong> instead.</p>
+
+    <p><strong style="color:#ff00d4;">Examples:</strong></p>
+    <ul style="color:#00ff88;">
+      <li>2 + 3 * 4</li>
+      <li>sin(pi/3)</li>
+      <li>12x + 6 = 34</li>
+      <li>alg(12x + 6 = 34, find x)</li>
+      <li>alg(5y - 7 = 3y + 9, find y)</li>
+    </ul>
+
+    <label>Your maths question:
+      <textarea id="question" rows="3"></textarea>
+    </label>
+
+    <button onclick="ask()">Calculate</button>
+
+    <h3 style="color:#00ff88;">Answer:</h3>
+    <div id="answer"></div>
+  </div>
+
+  <script>
+    function login() {
+      const pass = document.getElementById('password').value;
+      if (pass === '12345') {
+        document.getElementById('login').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+      } else {
+        document.getElementById('error').textContent = 'Incorrect password.';
+      }
+    }
+
+    // ENTER key triggers calculation + clears input
+    document.addEventListener("keydown", function(e) {
+      if (e.key === "Enter" && document.getElementById("app").style.display === "block") {
+        ask();
+        document.getElementById("question").value = "";
+      }
+    });
+
+    function ask() {
+      const q = document.getElementById('question').value.trim();
+      const answerBox = document.getElementById('answer');
+
+      if (!q) {
+        answerBox.textContent = 'Please type a maths question.';
+        return;
+      }
+
+      try {
+        // ALGEBRA COMMAND FORMAT: alg(12x + 6 = 34, find x)
+        if (q.startsWith("alg(") && q.endsWith(")")) {
+          const inside = q.slice(4, -1);
+          const parts = inside.split(",");
+          const equation = parts[0].trim();
+          const findPart = parts[1].trim().toLowerCase();
+
+          const variable = findPart.replace("find", "").trim();
+
+          const eq = math.parse(equation);
+          const solution = math.solve(eq, variable);
+
+          answerBox.textContent = `Solution for ${variable}: ${JSON.stringify(solution)}`;
+          return;
+        }
+
+        // Normal equation solving
+        if (q.includes('=')) {
+          const eq = math.parse(q);
+          const vars = eq.filter(node => node.isSymbolNode).map(n => n.name);
+          const uniqueVars = [...new Set(vars)];
+
+          if (uniqueVars.length === 0) {
+            answerBox.textContent = 'No variable found to solve for.';
+            return;
+          }
+
+          const variable = uniqueVars[0];
+          const solution = math.solve(eq, variable);
+          answerBox.textContent = `Solution for ${variable}: ${JSON.stringify(solution)}`;
+          return;
+        }
+
+        // Normal maths evaluation
+        const result = math.evaluate(q);
+        answerBox.textContent = 'Result: ' + result;
+
+      } catch (e) {
+        answerBox.textContent = 'I could not understand that maths question.\nDetails: ' + e.message;
+      }
+    }
+  </script>
+</body>
+</html>
